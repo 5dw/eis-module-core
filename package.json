@@ -4,7 +4,7 @@
   "description": "The core module for the EIS BE system.",
   "main": "index.js",
   "author": "zhiquan",
-  "license": "GPL",
+  "license": "GPL-1.0-or-later",
   "private": false,
   "repository": "git@gitlab.com:eis-modules/eis-module-core.git",
   "dependencies": {
