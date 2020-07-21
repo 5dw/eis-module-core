@@ -45,7 +45,7 @@ const _loadModule = function (app, md) {
                 mdl.path = path.join(__dirname, mPath || `../../modules/${name}`);
             } catch (exxx) {
                 app.logger.error(
-                    `Failed to load module: ${name}. \r\n ${JSON.stringify(exxx)}`
+                    `Failed to load module: ${name}. \r\n ${exxx}`
                 );
                 return;
             }
