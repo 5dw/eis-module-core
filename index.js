@@ -1,5 +1,5 @@
-const express = require("express");
 const path = require("path");
+const express = require(path.resolve('./') + "/node_modules/express");
 const fs = require('fs');
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
@@ -29,23 +29,30 @@ const _loadModule = function (app, md) {
 
     // try load module with the order: module in the modules folder, npm module, customer modules
     let mdl;
+    let errMsg='';
     try {
         // in modules folder
-        mdl = require(mPath || `../../modules/eis-module-${name}`);
-        mdl.path = path.join(__dirname, mPath || `../../modules/eis-module-${name}`);
+        mdl = require(mPath || `${app.projectRoot}/modules/eis-module-${name}`);
+        mdl.path = mPath || `${app.projectRoot}/modules/eis-module-${name}`;
     } catch (ex) {
+        errMsg += `\n${ex}\n`;
+        
         try {
             // npm module
-            mdl = require(mPath || `eis-module-${name}`);
-            mdl.path = path.join(__dirname, mPath || `../../node_modules/eis-module-${name}`);
+            mdl = require(mPath || `${app.projectRoot}/node_modules/eis-module-${name}`);
+            mdl.path = mPath || `${app.projectRoot}/node_modules/eis-module-${name}`;
         } catch (exx) {
+            errMsg += `${exx}\n`;
+
             try {
                 // customer moduels in modules folder
-                mdl = require(mPath || `../../modules/${name}`);
-                mdl.path = path.join(__dirname, mPath || `../../modules/${name}`);
+                mdl = require(mPath || `${app.projectRoot}/modules/${name}`);
+                mdl.path = mPath || `${app.projectRoot}/modules/${name}`;
             } catch (exxx) {
+                errMsg += `${exxx}`;
+
                 app.logger.error(
-                    `Failed to load module: ${name}. \r\n ${exxx}`
+                    `Failed to load module: ${name}. ${errMsg}`
                 );
                 return;
             }
@@ -118,20 +125,22 @@ const _runHook = function (app, name) {
 module.exports = {
     onBegin: app => {
         app.logger = logger;
+        app.projectRoot = path.resolve('./');
 
         // application context, all context related information can be stored here.
+
         app.ctx = {
-            version: require("../../package.json").version || "0.0.1",
+            version: require(path.resolve('./') + "/package.json").version || '0.0.1',
             serviceList: {}
         };
 
-        app.utils = require('../../utils');
+        app.utils = require(path.resolve('./') + '/utils');
 
         // all configurations stored in app.config, include config for each module which will overwrite the config in the module itself.
         app.config = Object.merge(
             {},
-            require("../../config/config.default"),
-            require(`../../config/config.${process.env.NODE_ENV}`)
+            require(require('path').resolve('./') + "/config/config.default"),
+            require(`${require('path').resolve('./')}/config/config.${process.env.NODE_ENV}`)
         );
 
         // injection
@@ -233,7 +242,7 @@ module.exports = {
 
         // Handle unhandledRejection and pass error to next middleware
         app.use(function (req, res, next) {
-            function unhandledRejection(reason) {
+            function unhandledRejection (reason) {
                 logger.error("Uncaught exception: " + reason.message || reason);
 
                 res.makeError(
@@ -384,7 +393,7 @@ module.exports = {
         _runHook(app, "beforeLastMiddleware");
 
         // return data to client or catch error and forward to error handler
-        app.use(function last_catch_middleware(req, res, next) {
+        app.use(function last_catch_middleware (req, res, next) {
             // return client request
             if (res._headerSent) {
                 return next();
