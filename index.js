@@ -71,7 +71,7 @@ const _loadModule = function (app, md) {
     // set the merged config, the final one, of the module to the module instance.
     mdl.config = Object.merge({}, mdl.config, app.config[name]);
 
-    // all all i18n translations
+    // add all i18n translations
     if (mdl.i18n) {
         mdl.t = (v, l) => {
             if (!l) l = app.ctx.locale || app.config['defaultLocale'] || 'zh-cn';
