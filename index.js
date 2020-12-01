@@ -189,7 +189,7 @@ module.exports = {
         app.use(express.urlencoded({ extended: true }));
         app.use(cookieParser());
         (app.config['staticFolders'] || []).forEach(s => {
-            app.use(app.config['assetsUrlPrefix'] || '/assets', express.static(s));
+            app.use(app.config['assetsUrlPrefix'] || '/assets', express.static(s, app.config['staticOptions'] || {}));
         })
 
         // security
