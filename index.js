@@ -181,9 +181,7 @@ module.exports = {
         _runHook(app, "onModulesReady");
 
         // setup global middleware
-        if (process.env.NODE_ENV !== "test") {
-            app.use(morgan("dev"));
-        }
+        app.use(morgan("dev"));
 
         app.use(bodyParser.json({ limit: app.config['bodySizeLimit'] || "10mb" }));
         app.use(express.urlencoded({ extended: true }));
