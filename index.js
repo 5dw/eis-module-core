@@ -4,6 +4,7 @@ const fs = require('fs');
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const logger = require(path.join(__dirname, "./lib/logger"));
+const cache = require('memory-cache');
 const morgan = require("morgan");
 
 require('./lib/extend');
@@ -125,6 +126,7 @@ const _runHook = function (app, name) {
 module.exports = {
     onBegin: app => {
         app.logger = logger;
+        app.cache = cache;
         app.projectRoot = path.resolve('./');
 
         // application context, all context related information can be stored here.

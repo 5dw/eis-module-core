@@ -11,6 +11,7 @@
     "body-parser": "^1.18.3",
     "cookie-parser": "~1.4.3",
     "helmet": "^3.21.1",
+    "memory-cache": "^0.2.0",
     "morgan": "^1.9.1",
     "winston": "^3.1.0"
   }
