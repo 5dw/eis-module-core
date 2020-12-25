@@ -30,25 +30,26 @@ const _loadModule = function (app, md) {
 
     // try load module with the order: module in the modules folder, npm module, customer modules
     let mdl;
-    let errMsg='';
+    let mdlPath;
+    let errMsg = '';
     try {
         // in modules folder
         mdl = require(mPath || `${app.projectRoot}/modules/eis-module-${name}`);
-        mdl.path = mPath || `${app.projectRoot}/modules/eis-module-${name}`;
+        mdlPath = mPath || `${app.projectRoot}/modules/eis-module-${name}`;
     } catch (ex) {
         errMsg += `\n${ex}\n`;
-        
+
         try {
             // npm module
             mdl = require(mPath || `${app.projectRoot}/node_modules/eis-module-${name}`);
-            mdl.path = mPath || `${app.projectRoot}/node_modules/eis-module-${name}`;
+            mdlPath = mPath || `${app.projectRoot}/node_modules/eis-module-${name}`;
         } catch (exx) {
             errMsg += `${exx}\n`;
 
             try {
                 // customer moduels in modules folder
                 mdl = require(mPath || `${app.projectRoot}/modules/${name}`);
-                mdl.path = mPath || `${app.projectRoot}/modules/${name}`;
+                mdlPath = mPath || `${app.projectRoot}/modules/${name}`;
             } catch (exxx) {
                 errMsg += `${exxx}`;
 
@@ -61,6 +62,9 @@ const _loadModule = function (app, md) {
     }
 
     if (!mdl) return;
+
+    if (typeof mdl === 'function') mdl = mdl(app);
+    mdl.path = mdlPath;
 
     // attach the app instance to the module instance.
     mdl.app = app;
