@@ -391,7 +391,7 @@ module.exports = {
         _runHook(app, "onRoutersReady");
 
         // real db operations
-        app.use(app.db.dataProcessMiddleware);
+        app.db && app.use(app.db.dataProcessMiddleware);
 
         // hook!
         _runHook(app, "beforeLastMiddleware");
