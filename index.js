@@ -310,6 +310,8 @@ module.exports = {
 
             m.data && app.db && app.db.initModuleModel && app.db.initModuleModel(app, m);
         })
+
+        _runHook(app, "onDBReady");
     },
     onLoadRouters: app => {
         // hook!
