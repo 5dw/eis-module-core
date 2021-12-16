@@ -302,6 +302,7 @@ module.exports = {
 
             m.data && app.db && app.db.initModuleSchema && app.db.initModuleSchema(app, m);
         })
+        _runHook(app, "onSchemaReady");
 
         // init the database models if the module has.
         Object.keys(app.modules).forEach(k => {
