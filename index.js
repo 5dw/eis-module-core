@@ -152,6 +152,108 @@ module.exports = {
         // injection
         require('./lib/injection')(app);
 
+        // security
+        require("./lib/security")(app);
+
+        // Handle unhandledRejection and pass error to next middleware
+        app.use(function (req, res, next) {
+            function unhandledRejection (reason) {
+                logger.error("Uncaught exception: " + reason.message || reason);
+                logger.error(req.originalUrl);
+
+                res.makeError(
+                    500,
+                    req.app.get("env") === "production"
+                        ? "System error, please contact with the system administrator!"
+                        : reason.message || reason
+                );
+                // next("route");
+            }
+
+            if (process.env.NODE_ENV === "test") {
+                // Un-limit event listeners for testing env only.
+                // Don't set this for production environment due to potential memory leak.
+                process.setMaxListeners(0);
+            }
+
+            process.on("unhandledRejection", unhandledRejection);
+            process.on("uncaughtException", unhandledRejection);
+
+            // Manage to get information from the response too, just like Connect.logger does:
+            const end = res.end;
+            res.end = function (chunk, encoding) {
+                if (this.statusCode !== 200) {
+                    // run mws before ending with error
+                    const mws = this.beforeReturnErrorMws || []
+                    for(let i = 0; i < mws.length; i += 1) {
+                        mws[i](req, res, next);
+                    }
+
+                    res.beforeReturnErrorMws = [];
+                }
+
+                // Prevent MaxListener on process.events
+                process.removeListener("unhandledRejection", unhandledRejection);
+                process.removeListener("uncaughtException", unhandledRejection);
+                res.end = end;
+
+                if (!res._headerSent) {
+                    res.end(chunk, encoding);
+                }
+            };
+
+            return next();
+        });
+
+        // add some common function to response
+        app.use(async function (req, res, next) {
+            res.locals = res.locals || {};
+            res.locals.data = res.locals.data || {};
+            res.locals.filter = res.locals.filter || {};
+            res.locals.options = res.locals.options || {};
+            res.locals.fields = res.locals.fields || [];
+
+            // add some function to the response
+            res.endWithErr = async function (code, msg) {
+                if (res._headerSent) return;
+
+                if (typeof msg === 'number') msg = { code: msg };
+                this.status(code).send({ msg: msg });
+            };
+
+            res.endWithData = function (data, msg = app.config['defaultResponseMessage'] || "OK") {
+                if (res._headerSent) return;
+                
+                this.status(200).send({ data, msg: msg });
+            };
+
+            res.addData = function (data, overwrite = true) {
+                if (overwrite) {
+                    res.locals.data = data;
+                } else {
+                    if (typeof data !== 'object' || Array.isArray(data)) {
+                        app.logger.error(`Data should be an object! (${req.originalUrl})`)
+                    }
+
+                    Object.merge(res.locals.data, data);
+                }
+            };
+
+            res.Module = (n) => {
+                if (!n) return undefined;
+                return res.app.modules && res.app.modules[n];
+            }
+
+            res.makeError = function (code, msg = "", mdl) {
+                if (typeof msg === 'number') msg = { code: msg };
+                res.locals.err = { code: code, msg: msg, mdl: mdl };
+            };
+
+            res.logger = logger;
+
+            return next();
+        });
+
         // load modules, merge configurations, get ordered modules according to the dependency relationship, etc.
         app.config.modules = app.config.modules || [];
         app.modules = {};
@@ -195,88 +297,6 @@ module.exports = {
         (app.config['staticFolders'] || []).forEach(s => {
             app.use(app.config['assetsUrlPrefix'] || '/assets', express.static(s, app.config['staticOptions'] || {}));
         })
-
-        // security
-        require("./lib/security")(app);
-
-        // add some common function to response
-        app.use(async function (req, res, next) {
-            res.locals = res.locals || {};
-            res.locals.data = res.locals.data || {};
-            res.locals.filter = res.locals.filter || {};
-            res.locals.options = res.locals.options || {};
-            res.locals.fields = res.locals.fields || [];
-
-            // add some function to the response
-            res.endWithErr = async function (code, msg) {
-                if (typeof msg === 'number') msg = { code: msg };
-                this.status(code).send({ msg: msg });
-            };
-
-            res.endWithData = function (data, msg = app.config['defaultResponseMessage'] || "OK") {
-                this.status(200).send({ data, msg: msg });
-            };
-
-            res.addData = function (data, overwrite = true) {
-                if (overwrite) {
-                    res.locals.data = data;
-                } else {
-                    if (typeof data !== 'object' || Array.isArray(data)) {
-                        app.logger.error(`Data should be an object! (${req.originalUrl})`)
-                    }
-
-                    Object.merge(res.locals.data, data);
-                }
-            };
-
-            res.Module = (n) => {
-                if (!n) return undefined;
-                return res.app.modules && res.app.modules[n];
-            }
-
-            res.makeError = function (code, msg = "", mdl) {
-                if (typeof msg === 'number') msg = { code: msg };
-                res.locals.err = { code: code, msg: msg, mdl: mdl };
-            };
-
-            res.logger = logger;
-
-            return next();
-        });
-
-        // Handle unhandledRejection and pass error to next middleware
-        app.use(function (req, res, next) {
-            function unhandledRejection (reason) {
-                logger.error("Uncaught exception: " + reason.message || reason);
-
-                res.makeError(
-                    500,
-                    req.app.get("env") === "production"
-                        ? "System error, please contact with the system administrator!"
-                        : reason.message || reason
-                );
-                next("route");
-            }
-
-            if (process.env.NODE_ENV === "test") {
-                // Un-limit event listeners for testing env only.
-                // Don't set this for production environment due to potential memory leak.
-                process.setMaxListeners(0);
-            }
-
-            process.on("unhandledRejection", unhandledRejection);
-
-            // Manage to get information from the response too, just like Connect.logger does:
-            const end = res.end;
-            res.end = function (chunk, encoding) {
-                // Prevent MaxListener on process.events
-                process.removeListener("unhandledRejection", unhandledRejection);
-                res.end = end;
-                res.end(chunk, encoding);
-            };
-
-            return next();
-        });
 
         // by default canI will always return true;
         app.post(`${app.config['baseUrl'] || ''}/can_i`,
@@ -403,7 +423,8 @@ module.exports = {
         app.use(function last_catch_middleware (req, res, next) {
             // return client request
             if (res._headerSent) {
-                return next();
+                // return next();
+                return;
             }
 
             let code = 0,
@@ -424,6 +445,18 @@ module.exports = {
             if (code === 404) {
                 if (req.originalUrl.startsWith(app.config['assetsUrlPrefix'] ? app.config['assetsUrlPrefix'] + '/' : '/assets/')) code = 200;
             }
+
+            if (code !== 200) {
+                // run mws before ending with error
+                const mws = res.beforeReturnErrorMws || []
+                for(let i = 0; i < mws.length; i += 1) {
+                    mws[i](req, res, next);
+                }
+
+                res.beforeReturnErrorMws = [];
+            }
+
+            if (res._headerSent) return;
 
             let returnData = (code === 200)
                 ? { data, msg: (msg || app.config['defaultResponseMessage'] || "OK") }
