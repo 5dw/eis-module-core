@@ -8,11 +8,11 @@
   "private": false,
   "repository": "git@gitlab.com:eis-modules/eis-module-core.git",
   "dependencies": {
-    "body-parser": "^1.18.3",
-    "cookie-parser": "~1.4.3",
+    "body-parser": "^1.20.0",
+    "cookie-parser": "~1.4.6",
     "helmet": "^3.21.1",
     "memory-cache": "^0.2.0",
     "morgan": "^1.9.1",
-    "winston": "^3.1.0"
+    "winston": "^3.8.1"
   }
 }
